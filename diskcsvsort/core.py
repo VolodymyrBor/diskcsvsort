@@ -26,7 +26,9 @@ class CSVSort:
         workdir: Path = Path(tempfile.gettempdir()),
         memory_limit: float = 300 * 1024 * 1024,  # 300 mb
         reverse: bool = False,
+        encoding: str = 'utf-8',
     ):
+        self._encoding = encoding
         self._src = src
         self._key = key
         self._workdir = workdir
@@ -43,7 +45,7 @@ class CSVSort:
 
     def _csv_is_sorted(self, src: Path) -> bool:
         operator_ = operator.ge if self._reverse else operator.le
-        with src.open('r') as file:
+        with src.open('r', encoding=self._encoding) as file:
             reader = csv.DictReader(file)
             try:
                 base_key = self._key(next(reader))
@@ -59,7 +61,7 @@ class CSVSort:
 
     def _reached_memory_limit(self, src: Path) -> bool:
         memory_usage = 0
-        with src.open('r') as file:
+        with src.open('r', encoding=self._encoding) as file:
             for i, row in enumerate(csv.DictReader(file)):
                 row_memory_usage = sys.getsizeof(row)
                 if row_memory_usage > self._memory_limit:
@@ -83,7 +85,7 @@ class CSVSort:
         files_to_sort: list[Path] = []
         files_to_close = []
 
-        with src.open('r') as src_file:
+        with src.open('r', encoding=self._encoding) as src_file:
             reader = csv.DictReader(src_file)
             if reader.fieldnames is None:
                 raise errors.CSVFileEmptyError(src)
@@ -134,13 +136,12 @@ class CSVSort:
             files_to_merge = map(self._hybrid_sort, files_to_sort)
             self._merge_csvs(src, *files_to_merge, delete=True)
 
-    @staticmethod
-    def _merge_csvs(dest: Path, *csvfiles: Path, delete: bool = False) -> NoReturn:
+    def _merge_csvs(self, dest: Path, *csvfiles: Path, delete: bool = False) -> NoReturn:
         need_header = True
-        with dest.open('w') as dst_file:
+        with dest.open('w', encoding=self._encoding, newline='') as dst_file:
             writer = csv.writer(dst_file)
             for csvfile in csvfiles:
-                with csvfile.open('r') as file:
+                with csvfile.open('r', encoding=self._encoding) as file:
                     reader = csv.reader(file)
                     try:
                         header = next(reader)
@@ -155,16 +156,15 @@ class CSVSort:
                     csvfile.unlink(missing_ok=True)
 
     def _memory_sort(self, src: Path) -> NoReturn:
-        with src.open('r') as file:
+        with src.open('r', encoding=self._encoding) as file:
             reader = csv.DictReader(file)
             if reader.fieldnames is None:
                 raise errors.CSVFileEmptyError(src)
             sorted_rows = sorted(reader, key=self._key, reverse=self._reverse)
         self._save_csv(sorted_rows, filepath=src, header=reader.fieldnames)
 
-    @staticmethod
-    def _save_csv(rows: Iterable[_ROW], filepath: Path, header: Sequence[str]) -> NoReturn:
-        with filepath.open('w') as file:
+    def _save_csv(self, rows: Iterable[_ROW], filepath: Path, header: Sequence[str]) -> NoReturn:
+        with filepath.open('w', encoding=self._encoding, newline='') as file:
             writer = csv.DictWriter(file, fieldnames=header)
             writer.writeheader()
             writer.writerows(rows)
