@@ -14,7 +14,13 @@ def get_path_tempfile(
     delete: bool = True,
     suffix: str = '',
 ) -> ContextManager[Path]:
+    """Create temporary file and return path of its.
 
+    :param directory: directory where will be created file.
+     OS temporary directory by default.
+    :param delete: whether to delete the file after closing of context
+    :param suffix: suffix of filename
+    """
     temp_dir = directory if directory else Path(tempfile.gettempdir())
     temp_dir.mkdir(parents=True, exist_ok=True)
 

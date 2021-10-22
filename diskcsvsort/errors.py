@@ -3,10 +3,11 @@ from pathlib import Path
 
 
 class CSVSortError(Exception):
-    pass
+    """Base expression of disk CSV sorting"""
 
 
 class CSVFileEmptyError(CSVSortError):
+    """Exception for case when CSV file is empty"""
 
     def __init__(self, filepath: Path):
         self.filepath = filepath

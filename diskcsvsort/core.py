@@ -12,6 +12,7 @@ _ROW: TypeAlias = dict[str, str]
 
 
 class CSVSort:
+    """CSV sorting using disk to reduce RAM usage"""
 
     _operators = [
         operator.lt,
@@ -29,6 +30,17 @@ class CSVSort:
         reverse: bool = False,
         encoding: str = 'utf-8',
     ):
+        """
+        :param src: CSV file path
+        :param key: sorting key function
+        :param workdir: directory where will be created temporary files for sorting
+        :param memory_limit: RAM limits for sorting
+        :param reverse: ASC if reverse is False else DSC
+        :param encoding: encoding of CSV file
+
+        NOTE: Be careful when choosing the memory_limit.
+        The smaller this limit, the longer it takes to sort.
+        """
         self._encoding = encoding
         self._src = src
         self._key = key
@@ -39,12 +51,14 @@ class CSVSort:
         self._workdir.mkdir(parents=True, exist_ok=True)
 
     def apply(self) -> NoReturn:
+        """Do sorting"""
         try:
             return self._hybrid_sort(self._src)
         except RecursionError as err:
             raise errors.CSVSortError(err)
 
     def _csv_is_sorted(self, src: Path) -> bool:
+        """Check if CSV is already sorted"""
         operator_ = operator.ge if self._reverse else operator.le
         with src.open('r', encoding=self._encoding) as file:
             reader = csv.DictReader(file)
@@ -61,6 +75,10 @@ class CSVSort:
         return True
 
     def _reached_memory_limit(self, src: Path) -> bool:
+        """Check if CSV file is reached memory_limit
+
+        :raise CSVSortError: if one row take more memory than memory limit
+        """
         memory_usage = 0
         with src.open('r', encoding=self._encoding) as file:
             for i, row in enumerate(csv.DictReader(file)):
@@ -74,6 +92,8 @@ class CSVSort:
         return False
 
     def _hybrid_sort(self, src: Path) -> Path:
+        """Sort CSV in memory if file is less than memory_limit.
+        Else sort CSV in disk"""
         if self._csv_is_sorted(src):
             return src
 
@@ -83,6 +103,9 @@ class CSVSort:
             return self._memory_sort(src)
 
     def _disk_sort(self, src: Path) -> Path:
+        """Sort csv file disk using quick sort approach.
+        :raise CSVFileEmptyError: if CSV file is empty
+        """
         files_to_sort: list[Path] = []
         files_to_close = []
 
@@ -142,6 +165,9 @@ class CSVSort:
         return src
 
     def _merge_csvs(self, dest: Path, *csvfiles: Path, delete: bool = False) -> NoReturn:
+        """Merge few CSV files to the one.
+        :raise CSVFileEmptyError is CSV file is empty
+        """
         need_header = True
         with dest.open('w', encoding=self._encoding, newline='') as dst_file:
             writer = csv.writer(dst_file)
@@ -161,6 +187,7 @@ class CSVSort:
                     csvfile.unlink(missing_ok=True)
 
     def _memory_sort(self, src: Path) -> Path:
+        """Just sort CSV file in memory"""
         with src.open('r', encoding=self._encoding) as file:
             reader = csv.DictReader(file)
             if reader.fieldnames is None:
@@ -170,6 +197,7 @@ class CSVSort:
         return src
 
     def _save_csv(self, rows: Iterable[_ROW], filepath: Path, header: Sequence[str]) -> NoReturn:
+        """Save rows to CSV file"""
         with filepath.open('w', encoding=self._encoding, newline='') as file:
             writer = csv.DictWriter(file, fieldnames=header)
             writer.writeheader()
