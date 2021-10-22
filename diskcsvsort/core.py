@@ -72,16 +72,16 @@ class CSVSort:
                     return True
         return False
 
-    def _hybrid_sort(self, src: Path) -> NoReturn:
+    def _hybrid_sort(self, src: Path) -> Path:
         if self._csv_is_sorted(src):
-            return None
+            return src
 
         if self._reached_memory_limit(src):
-            self._disk_sort(src)
+            return self._disk_sort(src)
         else:
-            self._memory_sort(src)
+            return self._memory_sort(src)
 
-    def _disk_sort(self, src: Path) -> NoReturn:
+    def _disk_sort(self, src: Path) -> Path:
         files_to_sort: list[Path] = []
         files_to_close = []
 
@@ -135,6 +135,7 @@ class CSVSort:
 
             files_to_merge = map(self._hybrid_sort, files_to_sort)
             self._merge_csvs(src, *files_to_merge, delete=True)
+        return src
 
     def _merge_csvs(self, dest: Path, *csvfiles: Path, delete: bool = False) -> NoReturn:
         need_header = True
@@ -155,13 +156,14 @@ class CSVSort:
                 if delete:
                     csvfile.unlink(missing_ok=True)
 
-    def _memory_sort(self, src: Path) -> NoReturn:
+    def _memory_sort(self, src: Path) -> Path:
         with src.open('r', encoding=self._encoding) as file:
             reader = csv.DictReader(file)
             if reader.fieldnames is None:
                 raise errors.CSVFileEmptyError(src)
             sorted_rows = sorted(reader, key=self._key, reverse=self._reverse)
         self._save_csv(sorted_rows, filepath=src, header=reader.fieldnames)
+        return src
 
     def _save_csv(self, rows: Iterable[_ROW], filepath: Path, header: Sequence[str]) -> NoReturn:
         with filepath.open('w', encoding=self._encoding, newline='') as file:

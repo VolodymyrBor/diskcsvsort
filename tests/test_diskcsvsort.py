@@ -53,7 +53,7 @@ class TestCSVSort:
             csvsort._save_csv(rows=rows, filepath=Path(tmpfile.name), header=header)
             assert csvsort._reached_memory_limit(Path(tmpfile.name))
 
-            csvsort.memory_limit = memory_usage
+            csvsort._memory_limit = memory_usage
             assert not csvsort._reached_memory_limit(Path(tmpfile.name))
 
     def test_merge_csv(self, tmp_path):
@@ -167,7 +167,6 @@ class TestCSVSort:
         ]
 
         memory_usage = sum(sys.getsizeof(row) for row in rows)
-        counter = 0
 
         def _int_key(row: dict):
             value = key(row)
@@ -186,11 +185,9 @@ class TestCSVSort:
         with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile:
             filepath = Path(tmpfile.name)
             csvsort._save_csv(rows=rows, filepath=filepath, header=header)
-            csvsort.filepath = filepath
+            csvsort._src = filepath
             csvsort.apply()
             assert_sorted_csv(filepath, reverse=reverse, key=_int_key)
-
-            assert counter == len(rows)
 
     def test_merge_empty_csv(self, tmp_path):
         csvsort = CSVSort(
@@ -213,9 +210,9 @@ class TestCSVSort:
         )
         with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path, delete=False) as tmpfile:
             filepath = Path(tmpfile.name)
-            csvsort.filepath = filepath
-
-        csvsort.apply()
+            csvsort._src = filepath
+        with pytest.raises(CSVFileEmptyError):
+            csvsort.apply()
 
     def test_disk_sort_empty_csv(self, tmp_path):
         csvsort = CSVSort(
