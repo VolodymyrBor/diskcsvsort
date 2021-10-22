@@ -1,16 +1,7 @@
 import csv
 import operator
-import tempfile
 from pathlib import Path
 from typing import Callable
-
-import pytest
-
-
-@pytest.fixture(scope='function')
-def tmpdir() -> Path:
-    with tempfile.TemporaryDirectory() as tmpdir:
-        yield Path(tmpdir)
 
 
 def assert_sorted_csv(filepath: Path, reverse: bool, key: Callable):

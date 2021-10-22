@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Callable, TypeAlias, Any, NoReturn, Iterable, Sequence
 
 from . import errors
+from .temp import get_path_tempfile
 
 _ROW: TypeAlias = dict[str, str]
 
@@ -96,18 +97,21 @@ class CSVSort:
             #   - rows > base
             channels = []
             for operator_ in self._operators:
-                tmp_file = tempfile.NamedTemporaryFile(
-                    'w',
-                    delete=False,
-                    dir=self._workdir,
+                with get_path_tempfile(
                     suffix='.csv',
-                )
-                files_to_sort.append(Path(tmp_file.name))
-                files_to_close.append(tmp_file)
-
-                writer = csv.DictWriter(tmp_file, fieldnames=reader.fieldnames)
-                writer.writeheader()
-                channels.append((writer, operator_))
+                    directory=self._workdir,
+                    delete=False,
+                ) as path_tempfile:
+                    temp_file = path_tempfile.open(
+                        mode='w',
+                        encoding=self._encoding,
+                        newline='',
+                    )
+                    files_to_sort.append(path_tempfile)
+                    files_to_close.append(temp_file)
+                    writer = csv.DictWriter(temp_file, fieldnames=reader.fieldnames)
+                    writer.writeheader()
+                    channels.append((writer, operator_))
 
             try:
                 base_row = next(reader)

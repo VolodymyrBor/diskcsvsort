@@ -1,7 +1,6 @@
 import csv
 import sys
 import random
-import tempfile
 import operator
 from pathlib import Path
 from unittest import mock
@@ -11,6 +10,7 @@ import pytest
 
 from tests.conftest import assert_sorted_csv
 from diskcsvsort import CSVSort
+from diskcsvsort.temp import get_path_tempfile
 from diskcsvsort.errors import CSVSortError, CSVFileEmptyError
 
 
@@ -27,12 +27,13 @@ class TestCSVSort:
             workdir=tmp_path,
             key=lambda x: x,
         )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile:
-            csvsort._save_csv(rows=rows, filepath=Path(tmpfile.name), header=header)
-            reader = csv.DictReader(tmpfile)
-            assert reader.fieldnames == header
-            for row, expected in zip_longest(reader, rows):
-                assert row == expected
+        with get_path_tempfile(suffix='.csv', directory=tmp_path) as path_tempfile:
+            csvsort._save_csv(rows=rows, filepath=path_tempfile, header=header)
+            with path_tempfile.open('r', encoding='utf-8') as tmpfile:
+                reader = csv.DictReader(tmpfile)
+                assert reader.fieldnames == header
+                for row, expected in zip_longest(reader, rows):
+                    assert row == expected
 
     def test_reached_memory_limit(self, tmp_path):
         header = ['A', 'B', 'C']
@@ -49,12 +50,12 @@ class TestCSVSort:
             key=lambda x: x,
             memory_limit=memory_usage / 2,
         )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile:
-            csvsort._save_csv(rows=rows, filepath=Path(tmpfile.name), header=header)
-            assert csvsort._reached_memory_limit(Path(tmpfile.name))
+        with get_path_tempfile(suffix='.csv', directory=tmp_path) as path:
+            csvsort._save_csv(rows=rows, filepath=path, header=header)
+            assert csvsort._reached_memory_limit(path)
 
             csvsort._memory_limit = memory_usage
-            assert not csvsort._reached_memory_limit(Path(tmpfile.name))
+            assert not csvsort._reached_memory_limit(path)
 
     def test_merge_csv(self, tmp_path):
         header = ['A', 'B', 'C']
@@ -72,18 +73,20 @@ class TestCSVSort:
             workdir=tmp_path,
             key=lambda x: x,
         )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile1, \
-                tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile2, \
-                tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmp_dest:
-            csvsort._save_csv(rows=rows1, filepath=Path(tmpfile1.name), header=header)
-            csvsort._save_csv(rows=rows2, filepath=Path(tmpfile2.name), header=header)
-            csvsort._merge_csvs(Path(tmp_dest.name), Path(tmpfile1.name), Path(tmpfile2.name))
+        with (
+            get_path_tempfile(suffix='.csv', directory=tmp_path) as path1,
+            get_path_tempfile(suffix='.csv', directory=tmp_path) as path2,
+            get_path_tempfile(suffix='.csv', directory=tmp_path) as tmp_dest,
+        ):
+            csvsort._save_csv(rows=rows1, filepath=path1, header=header)
+            csvsort._save_csv(rows=rows2, filepath=path2, header=header)
+            csvsort._merge_csvs(tmp_dest, path1, path2)
 
-            tmp_dest.seek(0)
-            reader = csv.DictReader(tmp_dest)
-            assert reader.fieldnames == header
-            for row, expected in zip_longest(reader, chain(rows1, rows2)):
-                assert row == expected
+            with tmp_dest.open('r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                assert reader.fieldnames == header
+                for row, expected in zip_longest(reader, chain(rows1, rows2)):
+                    assert row == expected
 
     def test_merge_csv_with_deleting(self, tmp_path):
         header = ['A', 'B', 'C']
@@ -101,21 +104,23 @@ class TestCSVSort:
             workdir=tmp_path,
             key=lambda x: x,
         )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmp_dest:
-            tmpfile1 = tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path, delete=False)
-            tmpfile2 = tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path, delete=False)
-            csvsort._save_csv(rows=rows1, filepath=Path(tmpfile1.name), header=header)
-            csvsort._save_csv(rows=rows2, filepath=Path(tmpfile2.name), header=header)
-            csvsort._merge_csvs(Path(tmp_dest.name), Path(tmpfile1.name), Path(tmpfile2.name), delete=True)
+        with (
+            get_path_tempfile(suffix='.csv', directory=tmp_path) as tmp_dest,
+            get_path_tempfile(suffix='.csv', directory=tmp_path, delete=False) as path_tmpfile1,
+            get_path_tempfile(suffix='.csv', directory=tmp_path, delete=False) as path_tmpfile2,
+        ):
+            csvsort._save_csv(rows=rows1, filepath=path_tmpfile1, header=header)
+            csvsort._save_csv(rows=rows2, filepath=path_tmpfile2, header=header)
+            csvsort._merge_csvs(tmp_dest, path_tmpfile1, path_tmpfile2, delete=True)
 
-            tmp_dest.seek(0)
-            reader = csv.DictReader(tmp_dest)
-            assert reader.fieldnames == header
-            for row, expected in zip_longest(reader, chain(rows1, rows2)):
-                assert row == expected
+            with tmp_dest.open('r', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                assert reader.fieldnames == header
+                for row, expected in zip_longest(reader, chain(rows1, rows2)):
+                    assert row == expected
 
-            assert not Path(tmpfile1.name).exists()
-            assert not Path(tmpfile2.name).exists()
+                assert not path_tmpfile1.exists()
+                assert not path_tmpfile2.exists()
 
     @pytest.mark.parametrize(['key', 'reverse'], (
         *[(operator.itemgetter(*comb), False) for comb in permutations('ABC', 1)],
@@ -145,8 +150,7 @@ class TestCSVSort:
             key=_int_key,
             reverse=reverse,
         )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile:
-            filepath = Path(tmpfile.name)
+        with get_path_tempfile(suffix='.csv', directory=tmp_path) as filepath:
             csvsort._save_csv(rows=rows, filepath=filepath, header=header)
             csvsort._memory_sort(filepath)
             assert_sorted_csv(filepath, reverse=reverse, key=_int_key)
@@ -175,17 +179,15 @@ class TestCSVSort:
             else:
                 return int(value)
 
-        csvsort = CSVSort(
-            src=Path('path/folder'),
-            workdir=tmp_path,
-            key=_int_key,
-            reverse=reverse,
-            memory_limit=memory_usage / 5,
-        )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile:
-            filepath = Path(tmpfile.name)
+        with get_path_tempfile(suffix='.csv', directory=tmp_path) as filepath:
+            csvsort = CSVSort(
+                src=filepath,
+                workdir=tmp_path,
+                key=_int_key,
+                reverse=reverse,
+                memory_limit=memory_usage / 5,
+            )
             csvsort._save_csv(rows=rows, filepath=filepath, header=header)
-            csvsort._src = filepath
             csvsort.apply()
             assert_sorted_csv(filepath, reverse=reverse, key=_int_key)
 
@@ -195,24 +197,23 @@ class TestCSVSort:
             workdir=tmp_path,
             key=lambda x: x,
         )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile1, \
-                tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile2, \
-                tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmp_dest:
-
+        with (
+            get_path_tempfile(suffix='.csv', directory=tmp_path) as path_tmpfile1,
+            get_path_tempfile(suffix='.csv', directory=tmp_path) as path_tmpfile2,
+            get_path_tempfile(suffix='.csv', directory=tmp_path) as tmp_dest,
+        ):
             with pytest.raises(CSVFileEmptyError):
-                csvsort._merge_csvs(Path(tmp_dest.name), Path(tmpfile1.name), Path(tmpfile2.name))
+                csvsort._merge_csvs(tmp_dest, path_tmpfile1, path_tmpfile2)
 
     def test_sort_empty_csv(self, tmp_path):
-        csvsort = CSVSort(
-            src=Path('path/folder'),
-            workdir=tmp_path,
-            key=lambda x: x,
-        )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path, delete=False) as tmpfile:
-            filepath = Path(tmpfile.name)
-            csvsort._src = filepath
-        with pytest.raises(CSVFileEmptyError):
-            csvsort.apply()
+        with get_path_tempfile(suffix='.csv', directory=tmp_path) as src:
+            csvsort = CSVSort(
+                src=src,
+                workdir=tmp_path,
+                key=lambda x: x,
+            )
+            with pytest.raises(CSVFileEmptyError):
+                csvsort.apply()
 
     def test_disk_sort_empty_csv(self, tmp_path):
         csvsort = CSVSort(
@@ -220,11 +221,9 @@ class TestCSVSort:
             workdir=tmp_path,
             key=lambda x: x,
         )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path, delete=False) as tmpfile:
-            filepath = Path(tmpfile.name)
-        # empty file
-        with pytest.raises(CSVFileEmptyError):
-            csvsort._disk_sort(filepath)
+        with get_path_tempfile(suffix='.csv', directory=tmp_path) as filepath:
+            with pytest.raises(CSVFileEmptyError):
+                csvsort._disk_sort(filepath)
 
     def test_disk_sort_csv_only_header(self, tmp_path):
         csvsort = CSVSort(
@@ -232,15 +231,13 @@ class TestCSVSort:
             workdir=tmp_path,
             key=lambda x: x,
         )
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path, delete=False) as tmpfile:
-            filepath = Path(tmpfile.name)
+        with get_path_tempfile(suffix='.csv', directory=tmp_path) as filepath:
             csvsort._save_csv({}, filepath, header=['A', 'B', 'C'])
-        with pytest.raises(CSVFileEmptyError):
-            csvsort._disk_sort(filepath)
+            with pytest.raises(CSVFileEmptyError):
+                csvsort._disk_sort(filepath)
 
     def test_disk_tiny_memory_limit(self, tmp_path):
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path, delete=False) as tmpfile:
-            filepath = Path(tmpfile.name)
+        with get_path_tempfile(suffix='.csv', directory=tmp_path) as filepath:
             csvsort = CSVSort(
                 src=filepath,
                 workdir=tmp_path,
@@ -250,8 +247,8 @@ class TestCSVSort:
 
             csvsort._save_csv([{'A': 'B'}, {'A': 'A'}], filepath, header=['A'])  # tiny memory usage
 
-        with pytest.raises(CSVSortError):
-            csvsort.apply()
+            with pytest.raises(CSVSortError):
+                csvsort.apply()
 
     def test_recursion_err(self, tmp_path):
         csvsort = CSVSort(
@@ -267,9 +264,9 @@ class TestCSVSort:
             csvsort.apply()
 
     def test_memory_sort_empty_csv(self, tmp_path):
-        with tempfile.NamedTemporaryFile('w+', suffix='.csv', dir=tmp_path) as tmpfile:
+        with get_path_tempfile(suffix='.csv', directory=tmp_path) as filepath:
             csvsort = CSVSort(
-                src=Path(tmpfile.name),
+                src=filepath,
                 workdir=tmp_path,
                 key=lambda x: x,
                 memory_limit=1,
