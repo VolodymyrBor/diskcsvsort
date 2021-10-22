@@ -5,8 +5,8 @@ import tempfile
 from pathlib import Path
 from typing import Callable, TypeAlias, Any, NoReturn, Iterable, Sequence
 
-from . import errors
-from .temp import get_path_tempfile
+from diskcsvsort import errors
+from diskcsvsort.temp import get_path_tempfile
 
 _ROW: TypeAlias = dict[str, str]
 

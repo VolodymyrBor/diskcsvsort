@@ -6,6 +6,7 @@ authors = ["volodymyrb <volodymyr.borysiuk0@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "^3.10"
+typer = "^0.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"

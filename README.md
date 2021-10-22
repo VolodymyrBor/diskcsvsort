@@ -24,5 +24,11 @@ csvsort.apply()
 
 ```
 
+### CLI
+Sort CSV file `path/to/file.csv` by columns `col1` and `col2`.
+
+    python -m diskcsvsort path/to/file.csv --by col1,col2
+
+
 ## Algorithm
 TODO
