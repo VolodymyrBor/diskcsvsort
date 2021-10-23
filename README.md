@@ -26,8 +26,25 @@ csvsort.apply()
 
 ### CLI
 Sort CSV file `path/to/file.csv` by columns `col1` and `col2`.
+`col1` will be converted to python `str` and `col2` will be converted to python `int`.
 
-    python -m diskcsvsort path/to/file.csv --by col1,col2
+    python -m diskcsvsort path/to/file.csv --by col1:str --by col2:int
+
+#### Available types:
+ - str
+ - int
+ - float
+ - datetime
+ - date
+ - time
+
+#### Types usage:
+- str: `column:str` 
+- int: `column:int` 
+- float: `column:float` 
+- datetime: `column:datetime[%Y-%m-%d %H:%M:%S]`
+- date: `column:datetime[%Y-%m-%d]`
+- time: `column:datetime[%H:%M:%S]`
 
 
 ## Algorithm
