@@ -17,7 +17,7 @@ def to_python_or_default(value: str, col: columns.BaseColumn) -> Any | None:
     try:
         return col.to_python(value)
     except ValueError:
-        return None
+        return None  # TODO return come inf object
 
 
 def get_key(columns_: dict[str, columns.BaseColumn]) -> Callable[[dict], tuple[Any, ...]]:
