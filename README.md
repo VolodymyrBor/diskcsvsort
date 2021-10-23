@@ -42,9 +42,9 @@ Sort CSV file `path/to/file.csv` by columns `col1` and `col2`.
 - str: `column:str` 
 - int: `column:int` 
 - float: `column:float` 
-- datetime: `column:datetime[%Y-%m-%d %H:%M:%S]`
-- date: `column:datetime[%Y-%m-%d]`
-- time: `column:datetime[%H:%M:%S]`
+- datetime: `column:datetime(%Y-%m-%d %H:%M:%S)`
+- date: `column:datetime(%Y-%m-%d)`
+- time: `column:datetime(%H:%M:%S)`
 
 
 ## Algorithm

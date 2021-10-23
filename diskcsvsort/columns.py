@@ -8,7 +8,7 @@ class BaseColumn(ABC):
     _strtype_re: Pattern = NotImplemented
 
     _has_parameter: bool = False
-    _parameter_re: Pattern = re.compile('\[.*]')
+    _parameter_re: Pattern = re.compile('\(.*\)')
 
     __columns__: dict[Pattern, Type['BaseColumn']] = {}
 
@@ -26,7 +26,7 @@ class BaseColumn(ABC):
     @classmethod
     def _fetch_parameter(cls, strtype: str) -> str:
         search = cls._parameter_re.search(strtype)
-        return search.group(0).strip('[]')
+        return search.group(0).strip('()')
 
     def __init_subclass__(cls, **kwargs):
         cls.__columns__[cls._strtype_re] = cls
@@ -70,7 +70,7 @@ class FloatColumn(BaseColumn):
 
 class DateTimeColumn(BaseColumn):
     _has_parameter = True
-    _strtype_re = re.compile('datetime\[.*]')
+    _strtype_re = re.compile('datetime\(.*\)')
 
     def to_python(self, value: str) -> dt.datetime:
         return dt.datetime.strptime(value, self._parameter)
@@ -78,7 +78,7 @@ class DateTimeColumn(BaseColumn):
 
 class DateColumn(DateTimeColumn):
     _has_parameter = True
-    _strtype_re = re.compile('date\[.*]')
+    _strtype_re = re.compile('date\(.*\)')
 
     def to_python(self, value: str) -> dt.date:
         return super().to_python(value).date()
@@ -86,7 +86,7 @@ class DateColumn(DateTimeColumn):
 
 class TimeColumn(DateTimeColumn):
     _has_parameter = True
-    _strtype_re = re.compile('time\[.*]')
+    _strtype_re = re.compile('time\(.*\)')
 
     def to_python(self, value: str) -> dt.time:
         return super().to_python(value).time()
