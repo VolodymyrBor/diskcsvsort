@@ -77,7 +77,6 @@ class DateTimeColumn(BaseColumn):
 
 
 class DateColumn(DateTimeColumn):
-    _has_parameter = True
     _strtype_re = re.compile('date\(.*\)')
 
     def to_python(self, value: str) -> dt.date:
@@ -85,7 +84,6 @@ class DateColumn(DateTimeColumn):
 
 
 class TimeColumn(DateTimeColumn):
-    _has_parameter = True
     _strtype_re = re.compile('time\(.*\)')
 
     def to_python(self, value: str) -> dt.time:
