@@ -1,6 +1,8 @@
 from pathlib import Path
 from typing import Iterable, Any
 
+import typer
+
 from .columns import BaseColumn, get_column
 from diskcsvsort import CSVSort, errors
 from diskcsvsort.infany import infany, InfAny
@@ -70,3 +72,26 @@ class CSVSortCLI:
             self._to_python_or_default(row[name], col)
             for name, col in self._columns.items()
         )
+
+
+def cli_run(
+    src: Path = typer.Argument(..., exists=True, help='CSV file path.'),
+    encoding: str = typer.Option('utf-8', help='File encoding.'),
+    reverse: bool = typer.Option(False, help='use DSC.'),
+    memory_limit: float = typer.Option(300 * 1024 * 1024, help='Memory limit. Default is 300 MB.'),
+    by: list[str] = typer.Option(ALL_COLUMNS, help='Columns for sorting. Coma separated.'),
+):
+
+    try:
+        cli = CSVSortCLI(
+            src=src,
+            encoding=encoding,
+            reverse=reverse,
+            memory_limit=memory_limit,
+            by=by,
+        )
+        cli.run()
+    except CLIError as err:
+        print(f'Error: {err}')
+    else:
+        print(f'CSV file has been sorted: {src}')
