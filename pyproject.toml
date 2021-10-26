@@ -3,6 +3,14 @@ name = "diskcsvsort"
 version = "0.1.0"
 description = "Sort huge csv files."
 authors = ["volodymyrb <volodymyr.borysiuk0@gmail.com>"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/VolodymyrBor/diskcsvsort"
+repository = "https://github.com/VolodymyrBor/diskcsvsort"
+
+packages = [
+    {include = "diskcsvsort"},
+]
 
 [tool.poetry.dependencies]
 python = "^3.10"
