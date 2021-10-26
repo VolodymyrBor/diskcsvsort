@@ -27,7 +27,7 @@ class CSVSortCLI:
         by: Iterable[str],
     ):
         self._by = tuple(by)
-        self.memory_limit = memory_limit
+        self._memory_limit = memory_limit
         self._src = src
         self._encoding = encoding
         self._reverse = reverse
@@ -41,7 +41,7 @@ class CSVSortCLI:
         csvsort = CSVSort(
             src=self._src,
             key=key,
-            memory_limit=self.memory_limit,
+            memory_limit=self._memory_limit,
             reverse=self._reverse,
             encoding=self._encoding,
         )
