@@ -6,3 +6,6 @@ venv
 
 # Tests
 .coverage
+
+# Build
+dist
