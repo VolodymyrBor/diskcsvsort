@@ -40,13 +40,6 @@ def get_column(strtype: str) -> BaseColumn:
         raise ValueError(f'Not supported column type: {strtype}')
 
 
-def get_columns(columns: dict[str, str]) -> dict[str, BaseColumn]:
-    return {
-        name: get_column(strtype)
-        for name, strtype in columns.items()
-    }
-
-
 class StrColumn(BaseColumn):
     _strtype_re = re.compile('str')
 

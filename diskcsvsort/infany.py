@@ -1,12 +1,12 @@
-from typing import Any
+from typing import Any, Optional
 
 
 class InfAny:
     """InfAny always bigger than another object during the comparison.
     Like math.inf but for any object."""
 
-    _pos_inst: 'InfAny' | None = None
-    _neg_inst: 'InfAny' | None = None
+    _pos_inst: Optional['InfAny'] = None
+    _neg_inst: Optional['InfAny'] = None
 
     def __new__(cls, is_negative: bool = False):
         if is_negative:
