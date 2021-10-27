@@ -10,43 +10,25 @@ For now support only CSV files with **header**.
 
 ## Usage
 
-### For example
+Sort CSV file `path/to/file.csv` by column `Some Column`.
 
----
-
-#### CSV file with movies
-
-| name              | year |
-|-------------------|------|
-| Batman Begins     | 2005 |
-| Blade Runner 2049 | 2017 |
-| Dune              | 2021 |
-| Snatch            | 2000 |
-
-Sort this CSV file that stored in `movies.csv` by `year` and `name`.
-
-**Note**: _order of columns is matter during sorting._
-
----
-
-### Using diskcsvsort package
 ```python
 from pathlib import Path
 from diskcsvsort import CSVSort
 
 csvsort = CSVSort(
-    src=Path('movies.csv'),
-    key=lambda row: (int(row['year']), row['name']),
+    src=Path('path/to/file.csv'),
+    key=lambda row: row['Some Column'],
 )
 csvsort.apply()
 
 ```
 
-### Using diskcsvsort CLI
+### CLI
+Sort CSV file `path/to/file.csv` by columns `col1` and `col2`.
+`col1` will be converted to python `str` and `col2` will be converted to python `int`.
 
-    python -m diskcsvsort movies.csv --by year:int --by name:str
-
-**Note**: columns `year` and `name` will be converted to `int` and `str`, respectively.
+    python -m diskcsvsort path/to/file.csv --by col1:str --by col2:int
 
 #### Available types:
  - str
@@ -66,8 +48,4 @@ csvsort.apply()
 
 
 ## Algorithm
-TODO
-
-
-## Metrics
 TODO
